@@ -263,18 +263,20 @@ function initSkillBars() {
 
 /* ─── 10. CONTACT FORM ───────────────────────────── */
 function initContactForm() {
-  const form    = document.getElementById('contact-form');
-  const success = document.getElementById('form-success');
+  const form      = document.getElementById('contact-form');
+  const success   = document.getElementById('form-success');
   const submitBtn = form.querySelector('[type="submit"]');
 
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // Basic validation
+    // Extract form values
     const name    = form.querySelector('#name').value.trim();
     const email   = form.querySelector('#email').value.trim();
+    const subject = form.querySelector('#subject')?.value.trim() || '';
     const message = form.querySelector('#message').value.trim();
 
+    // Basic validation
     if (!name || !email || !message) {
       shakeForm();
       return;
@@ -284,17 +286,34 @@ function initContactForm() {
       return;
     }
 
-    // Simulate send
+    // UI Loading state
     submitBtn.disabled = true;
+    const originalText = submitBtn.querySelector('.btn-text').textContent;
     submitBtn.querySelector('.btn-text').textContent = 'Sending…';
 
-    setTimeout(() => {
-      form.reset();
+    try {
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, subject, message }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        form.reset();
+        success.classList.add('show');
+        setTimeout(() => success.classList.remove('show'), 5000);
+      } else {
+        alert(result.error || 'Failed to send message. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      alert('An unexpected error occurred. Please try again later.');
+    } finally {
       submitBtn.disabled = false;
-      submitBtn.querySelector('.btn-text').textContent = 'Send Message';
-      success.classList.add('show');
-      setTimeout(() => success.classList.remove('show'), 5000);
-    }, 1400);
+      submitBtn.querySelector('.btn-text').textContent = originalText;
+    }
   });
 
   function isValidEmail(email) {
